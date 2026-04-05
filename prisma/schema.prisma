@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String         @id @default(cuid())
+  name         String
+  email        String         @unique
+  password     String
+  slug         String         @unique
+  bio          String?
+  price        String?        // general pricing note (e.g. "歡迎詢問" or a range)
+  showPrices   Boolean        @default(true)
+  images       String         @default("[]")
+  avatar         String?          // teacher profile photo URL
+  portfolioLinks String           @default("[]") // JSON: [{url,label}]
+  createdAt    DateTime       @default(now())
+  availability Availability[]
+  bookings     Booking[]
+  services     Service[]
+}
+
+model Availability {
+  id        String   @id @default(cuid())
+  userId    String
+  date      String   // "YYYY-MM-DD"
+  forType   String   @default("student") // student | bridal
+  status    String   @default("available") // available | booked | closed
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date, forType])
+}
+
+model Booking {
+  id              String   @id @default(cuid())
+  userId          String
+  date            String   // "YYYY-MM-DD"
+  customerName    String
+  customerContact String
+  note            String?
+  bookingType     String   @default("student") // student | bridal
+  status          String   @default("pending")
+  // pending | confirmed | cancelled | conflict_pending | conflict_resolved
+  serviceId       String?  // which Service was selected
+
+  // ── Student-specific ──
+  classNumber     Int?     // teacher fills in: which class session
+  lessonContent   String?  // teacher fills in: what was covered
+  learnTarget     String?  // customer fills in: what they want to learn
+
+  // ── Bridal-specific ──
+  deposit         String?  // teacher marks: deposit received
+  weddingDate     String?  // customer fills in: actual wedding date
+  serviceContent  String?  // customer fills in: service needed
+  bridalPhone     String?  // 聯絡電話
+  numDresses      String?  // 幾套禮服 (e.g. "3套")
+  banquetType     String?  // 早宴/午宴/晚宴
+  needsFollowUp   Boolean? // 跟妝
+  needsTrial      Boolean? // 試妝
+  venueLocation   String?  // 婚宴地點
+  banquetTime     String?  // 婚宴時間
+
+  createdAt       DateTime @default(now())
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Service {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  description String?
+  price       String?  // null = price hidden
+  showPrice   Boolean  @default(true)
+  serviceType String   @default("bridal") // bridal | individual | group
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
